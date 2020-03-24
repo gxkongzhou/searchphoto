@@ -12,25 +12,23 @@ import sys
 import time
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.cron import CronTrigger
 # '
 from pathlib import Path
 
-from apscheduler.schedulers.background import BlockingScheduler
-from apscheduler.triggers.cron import CronTrigger
-
 # Dir constant parameter
-cust_dir = 'Y:\custom'
+cust_dir = r'X:'
 photo_ser_p = 'Y:'
 photo_p = 'Z:'
-today = datetime.now().strftime('%Y%m%d')
-#photo_today = r"Z:\原始工卡照\20200112补录"
-photo_today = "".join([photo_p, "\原始工卡照", '\{}'.format(today), "补录"])
+
 
 # log config
 LOGFORMAT = '%(asctime)s - %(thread)s - %(levelname)s : %(message)s'
-LOGFILE = 'd:\date\search.log'
-LOGERROR = 'd:\date\search.err'
-Path('d:\date').mkdir(parents=True, exist_ok=True)
+LOGFILE = 'c:\date\search.log'
+LOGERROR = 'c:\date\search.err'
+Path('c:\date').mkdir(parents=True, exist_ok=True)
 
 searchlog = logging.getLogger('searchlog')
 searchlog.propagate = False
@@ -54,8 +52,21 @@ def illegal_character(file):
     searchlog.error("File <{}> name is illegal".format(file.stem))
 
 
+def del_cust(all_name, cust_path):
+    print("start del")
+    for cfile in cust_path.rglob('*.png'):
+        if cfile.stem in all_name:
+            searchlog.warning('Delect {}'.format(cfile))
+            cfile.unlink()
+
+
 def cleancustom():
     starttime = time.perf_counter()
+    
+    #photo_today = r"Z:\原始工卡照\20200313补录"
+    today = datetime.now().strftime('%Y%m%d')
+    photo_today = "".join([photo_p, "\原始工卡照", '\{}'.format(today), "补录"])
+    
     # search photo source file
     try:
         source_path = Path(photo_today)
@@ -89,6 +100,8 @@ def cleancustom():
             all_name.append(correctname)
         all_name.append(file.stem)
 
+    searchlog.debug('The number of files today is : {}'.format(len(all_name)))
+
     # search custom file
     try:
         cust_path = Path(cust_dir)
@@ -99,24 +112,17 @@ def cleancustom():
     except FileNotFoundError as fileer:
         searchlog.error("{0} {1}".format(fileer.strerror, fileer.filename))
         raise
-    del_cust(all_name, cust_path)
-
-    usetime = time.perf_counter() - starttime
-    searchlog.debug('Time used : {}'.format(usetime))
-
-
-def del_cust(all_name, cust_path):
-    for cfile in cust_path.rglob("*.png"):
-        if cfile.stem in all_name:
-            searchlog.warning('Delect {}'.format(cfile))
-            cfile.unlink()
+    else:  
+        del_cust(all_name, cust_path)
+        usetime = time.perf_counter() - starttime
+        searchlog.debug('Time used : {}'.format(usetime))
 
 
 if __name__ == "__main__":
     mysched = BlockingScheduler()
     # 22 points every day
-    mytrigger = CronTrigger(hour='22', minute=30)
-    mysched.add_job(cleancustom, mytrigger)
+    mytrigger = CronTrigger(hour='23', minute=30)
+    mysched.add_job(cleancustom, 'cron', hour='23', minute=30,misfire_grace_time=300)
     fstd = open(LOGERROR, 'a')
     sys.stdout = fstd
     sys.stderr = fstd
