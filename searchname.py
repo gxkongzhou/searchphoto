@@ -40,21 +40,32 @@ searchhandler.setFormatter(searchformat)
 searchlog.addHandler(searchhandler)
 
 
-def illegal_character(file):
-    judge = re.match(r'\w+', file.stem, re.I)
-    if judge is not None and re.match(r'\w+', file.stem, re.I).group() == file.stem:
-        judge = re.match(r'^[a-zA-Z].+[a-zA-Z]$', file.stem, re.I)
-        if judge is not None and re.match(r'^[a-zA-Z].+[a-zA-Z]$', file.stem, re.I).group() == file.stem:
-            return True
-        searchlog.error("File <{}> name is illegal".format(file.stem))
-        return False
-    searchlog.error("File <{}> name is illegal".format(file.stem))
+# Only English characters and Chinese characters are allowed
+def check_name(name):
+    errornum = []
+    for num, char in enumerate(name):
+        if num == 0:
+            if re.match(r'[a-zA-Z]]', char) or '\u4e00' <= char <= '\u9fff':
+                continue
+            else:
+                errornum.append(num)
+        elif re.match(r'[a-zA-Z_]', char) or '\u4e00' <= char <= '\u9fff':
+            continue
+        else:
+            errornum.append(num)
+    if len(errornum) == 0:
+        return True
+    else:
+        # searchlog.error("File <{}> name is illegal".format(file.stem))
+        return errornum
+
+    # searchlog.error("File <{}> name is illegal".format(file.stem))
 
 
-def del_cust(all_name, cust_path):
+def del_cust(finally_name, cust_path):
     print("start del")
     for cfile in cust_path.rglob('*.png'):
-        if cfile.stem in all_name:
+        if cfile.stem in finally_name:
             searchlog.warning('Delect {}'.format(cfile))
             cfile.unlink()
 
@@ -78,8 +89,6 @@ def cleancustom():
         raise
 
     allfile = [x for x in source_path.rglob('*') if x.is_file()]
-    alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
-
     # Record an incorrectly formatted file
     for file in allfile:
         if re.search(r'png$', file.suffix, re.I, ):
@@ -87,19 +96,17 @@ def cleancustom():
         if re.search(r'jpeg$', file.suffix, re.I, ):
             searchlog.warning('The file <{}> is not correct format'.format(file.name))
 
-    all_name = []
+    # Double check all files in directory to avoid omissions caused by network delays
+    alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
+    all_name1 = []
+    find_all_name(all_name1, alljpgfile)
+    time.sleep(300)
+    alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
+    all_name2 = []
+    find_all_name(all_name2, alljpgfile)
+    finally_name = all_name1 if all_name1 == all_name2 else list(set(all_name2+all_name1))
 
-    for file in alljpgfile:
-        if not illegal_character(file):
-            # Clear the trailing space character
-            correctname = "".join([file.stem.rstrip(), file.suffix])
-            # newPath_object = Path/'string'
-            searchlog.warning(" Rename {}".format(correctname))
-            file.rename(file.parent / correctname)
-            all_name.append(file.stem)
-        all_name.append(file.stem)
-
-    searchlog.debug('The number of files today is : {}'.format(len(all_name)))
+    searchlog.debug('The number of files today is : {}'.format(len(finally_name)))
 
     # search custom file
     try:
@@ -112,16 +119,32 @@ def cleancustom():
         searchlog.error("{0} {1}".format(fileer.strerror, fileer.filename))
         raise
     else:
-        del_cust(all_name, cust_path)
+        del_cust(finally_name, cust_path)
         usetime = time.perf_counter() - starttime
         searchlog.debug('Time used : {}'.format(usetime))
+
+
+def find_all_name(finally_name, alljpgfile):
+    for file in alljpgfile:
+        if check_name(file.stem) != True:
+            # Clear the illegal
+            namel = [n for n in file.stem]
+            for n in check_name(file):
+                namel.pop(n)
+            correctname = "".join(namel)
+            # newPath_object = Path/'string'
+            searchlog.warning(" Rename {}".format(correctname))
+            file.rename(file.parent / correctname)
+            finally_name.append(file.stem)
+        else:
+            finally_name.append(file.stem)
 
 
 if __name__ == "__main__":
     mysched = BlockingScheduler()
     # 22 points every day
     mytrigger = CronTrigger(hour='23', minute=30)
-    mysched.add_job(cleancustom, CronTrigger, misfire_grace_time=300)
+    mysched.add_job(cleancustom, mytrigger, misfire_grace_time=300)
     fstd = open(LOGERROR, 'a')
     sys.stdout = fstd
     sys.stderr = fstd
