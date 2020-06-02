@@ -45,7 +45,7 @@ def check_name(name):
     errornum = []
     for num, char in enumerate(name):
         if num == 0:
-            if re.match(r'[a-zA-Z]]', char) or '\u4e00' <= char <= '\u9fff':
+            if re.match(r'[a-zA-Z]', char) or '\u4e00' <= char <= '\u9fff':
                 continue
             else:
                 errornum.append(num)
@@ -104,7 +104,7 @@ def cleancustom():
     alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
     all_name2 = []
     find_all_name(all_name2, alljpgfile)
-    finally_name = all_name1 if all_name1 == all_name2 else list(set(all_name2+all_name1))
+    finally_name = all_name1 if all_name1 == all_name2 else list(set(all_name2 + all_name1))
 
     searchlog.debug('The number of files today is : {}'.format(len(finally_name)))
 
@@ -129,13 +129,13 @@ def find_all_name(finally_name, alljpgfile):
         if check_name(file.stem) != True:
             # Clear the illegal
             namel = [n for n in file.stem]
-            for n in check_name(file):
+            for n in check_name(file.stem):
                 namel.pop(n)
             correctname = "".join(namel)
             # newPath_object = Path/'string'
             searchlog.warning(" Rename {}".format(correctname))
-            file.rename(file.parent / correctname)
-            finally_name.append(file.stem)
+            file.rename(correctname + '.jpg')
+            finally_name.append(correctname)
         else:
             finally_name.append(file.stem)
 
