@@ -10,8 +10,9 @@ import logging
 import re
 import sys
 import time
+import mytools
 from datetime import datetime
-from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler as RF
 # '
 from pathlib import Path
 
@@ -31,7 +32,7 @@ Path('c:\date').mkdir(parents=True, exist_ok=True)
 
 searchlog = logging.getLogger('searchlog')
 searchlog.propagate = False
-searchhandler = RotatingFileHandler(LOGFILE, mode='a', maxBytes=30 * 1024 * 1024, backupCount=3)
+searchhandler = RF(LOGFILE, mode='a', maxBytes=30 * 1024 * 1024, backupCount=3)
 searchformat = logging.Formatter(LOGFORMAT)
 
 searchlog.setLevel(logging.DEBUG)
@@ -45,7 +46,7 @@ def check_name(name):
     errornum = []
     for num, char in enumerate(name):
         if num == 0:
-            if re.match(r'[a-zA-Z]]', char) or '\u4e00' <= char <= '\u9fff':
+            if re.match(r'[a-zA-Z]', char) or '\u4e00' <= char <= '\u9fff':
                 continue
             else:
                 errornum.append(num)
@@ -73,7 +74,7 @@ def del_cust(finally_name, cust_path):
 def cleancustom():
     starttime = time.perf_counter()
 
-    # photo_today = r"Z:\原始工卡照\20200313补录"
+    #photo_today = r"Z:\原始工卡照\20200605补录"
     today = datetime.now().strftime('%Y%m%d')
     photo_today = "".join([photo_p, "\原始工卡照", '\{}'.format(today), "补录"])
 
@@ -104,9 +105,14 @@ def cleancustom():
     alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
     all_name2 = []
     find_all_name(all_name2, alljpgfile)
-    finally_name = all_name1 if all_name1 == all_name2 else list(set(all_name2+all_name1))
+    finally_name = all_name1 if all_name1 == all_name2 else list(set(all_name2 + all_name1))
 
     searchlog.debug('The number of files today is : {}'.format(len(finally_name)))
+    searchlog.debug('#'*120)
+    grouping_f = mytools.grouping(finally_name,10)
+    str_group = [str(g) for g in grouping_f]
+    searchlog.debug('\n'.join(str_group))
+    searchlog.debug('#'*120)
 
     # search custom file
     try:
@@ -129,13 +135,14 @@ def find_all_name(finally_name, alljpgfile):
         if check_name(file.stem) != True:
             # Clear the illegal
             namel = [n for n in file.stem]
-            for n in check_name(file):
+            for n in check_name(file.stem):
                 namel.pop(n)
             correctname = "".join(namel)
             # newPath_object = Path/'string'
-            searchlog.warning(" Rename {}".format(correctname))
-            file.rename(file.parent / correctname)
-            finally_name.append(file.stem)
+            record = {'old':file.stem, 'new':correctname}
+            searchlog.warning(" Rename <{old}> to <{new}>".format(**record))
+            file.rename(file.with_name(correctname + file.suffix))
+            finally_name.append(correctname)
         else:
             finally_name.append(file.stem)
 
