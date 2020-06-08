@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 r"""Find the user name of the photo stored in the warehouse the day before and
 clean up the personal photos.Add get specific photo object.
 Actually returns the photo object
@@ -10,14 +11,15 @@ import logging
 import re
 import sys
 import time
-import mytools
+from copy import deepcopy
 from datetime import datetime
 from logging.handlers import RotatingFileHandler as RF
-# '
 from pathlib import Path
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+
+import mytools
 
 # Dir constant parameter
 cust_dir = r'X:'
@@ -63,10 +65,10 @@ def check_name(name):
     # searchlog.error("File <{}> name is illegal".format(file.stem))
 
 
-def del_cust(finally_name, cust_path):
-    print("start del")
+def del_cust(End_u_list, cust_path):
+    searchlog.debug("Start del:!!!")
     for cfile in cust_path.rglob('*.png'):
-        if cfile.stem in finally_name:
+        if cfile.stem in End_u_list:
             searchlog.warning('Delect {}'.format(cfile))
             cfile.unlink()
 
@@ -74,7 +76,7 @@ def del_cust(finally_name, cust_path):
 def cleancustom():
     starttime = time.perf_counter()
 
-    #photo_today = r"Z:\原始工卡照\20200605补录"
+    # photo_today = r"Z:\原始工卡照\20200605补录"
     today = datetime.now().strftime('%Y%m%d')
     photo_today = "".join([photo_p, "\原始工卡照", '\{}'.format(today), "补录"])
 
@@ -101,18 +103,20 @@ def cleancustom():
     alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
     all_name1 = []
     find_all_name(all_name1, alljpgfile)
-    time.sleep(300)
+    time.sleep(60)
     alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
     all_name2 = []
     find_all_name(all_name2, alljpgfile)
-    finally_name = all_name1 if all_name1 == all_name2 else list(set(all_name2 + all_name1))
+    End_u_list = all_name1 if all_name1 == all_name2 else list(set(all_name2 + all_name1))
 
-    searchlog.debug('The number of files today is : {}'.format(len(finally_name)))
-    searchlog.debug('#'*120)
-    grouping_f = mytools.grouping(finally_name,10)
+    # Deepcopy End_u_list to record,because the grouping will be change the original list of names.
+    copy_fina_name = deepcopy(End_u_list)
+    searchlog.debug('The number of files today is : {}'.format(len(copy_fina_name)))
+    searchlog.debug('#' * 120)
+    grouping_f = mytools.grouping(copy_fina_name, 10)
     str_group = [str(g) for g in grouping_f]
     searchlog.debug('\n'.join(str_group))
-    searchlog.debug('#'*120)
+    searchlog.debug('#' * 120)
 
     # search custom file
     try:
@@ -125,12 +129,12 @@ def cleancustom():
         searchlog.error("{0} {1}".format(fileer.strerror, fileer.filename))
         raise
     else:
-        del_cust(finally_name, cust_path)
+        del_cust(End_u_list, cust_path)
         usetime = time.perf_counter() - starttime
         searchlog.debug('Time used : {}'.format(usetime))
 
 
-def find_all_name(finally_name, alljpgfile):
+def find_all_name(u_list, alljpgfile):
     for file in alljpgfile:
         if check_name(file.stem) != True:
             # Clear the illegal
@@ -139,12 +143,12 @@ def find_all_name(finally_name, alljpgfile):
                 namel.pop(n)
             correctname = "".join(namel)
             # newPath_object = Path/'string'
-            record = {'old':file.stem, 'new':correctname}
+            record = {'old': file.stem, 'new': correctname}
             searchlog.warning(" Rename <{old}> to <{new}>".format(**record))
             file.rename(file.with_name(correctname + file.suffix))
-            finally_name.append(correctname)
+            u_list.append(correctname)
         else:
-            finally_name.append(file.stem)
+            u_list.append(file.stem)
 
 
 if __name__ == "__main__":
