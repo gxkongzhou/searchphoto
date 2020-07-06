@@ -20,9 +20,11 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 # Dir constant parameter
-cust_dir = r'X:'
-photo_ser_p = 'Y:'
-photo_p = 'Z:'
+root = r"\\tencent.com\tfs\跨部门项目\HRC"
+photo_p = r'{}\photo'.format(root)
+photo_ser_p = r'{}\photo_service'.format(root)
+cust_dir = r'{}\custom'.format(photo_ser_p)
+
 
 # log config
 LOGFORMAT = '%(asctime)s - %(thread)s - %(levelname)s : %(message)s'
@@ -64,7 +66,7 @@ def check_name(name):
 
 
 def del_cust(finally_name, cust_path):
-    print("start del")
+    searchlog.debug("Start del !!!")
     for cfile in cust_path.rglob('*.png'):
         if cfile.stem in finally_name:
             searchlog.warning('Delect {}'.format(cfile))
@@ -74,7 +76,7 @@ def del_cust(finally_name, cust_path):
 def cleancustom():
     starttime = time.perf_counter()
 
-    #photo_today = r"Z:\原始工卡照\20200605补录"
+    #photo_today = photo_p + r"\原始工卡照\20200706补录"
     today = datetime.now().strftime('%Y%m%d')
     photo_today = "".join([photo_p, "\原始工卡照", '\{}'.format(today), "补录"])
 
@@ -101,7 +103,7 @@ def cleancustom():
     alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
     all_name1 = []
     find_all_name(all_name1, alljpgfile)
-    time.sleep(300)
+    time.sleep(60)
     alljpgfile = [x for x in source_path.rglob('*.jpg') if x.is_file()]
     all_name2 = []
     find_all_name(all_name2, alljpgfile)
