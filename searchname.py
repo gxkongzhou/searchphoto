@@ -160,4 +160,4 @@ if __name__ == "__main__":
     try:
         mysched.start()
     except:
-        searchlog.error("There's been some trouble")
+        searchlog.debug("There's been some trouble")
