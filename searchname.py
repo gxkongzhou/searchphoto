@@ -69,14 +69,16 @@ def del_cust(finally_name, cust_path):
     searchlog.debug("Start del !!!")
     for cfile in cust_path.rglob('*.png'):
         if cfile.stem in finally_name:
-            searchlog.warning('Delect {}'.format(cfile))
             cfile.unlink()
-
+            if not cfile.exists():
+                searchlog.warning('Delect {} 成功'.format(cfile))
+            else:
+                searchlog.warning('Delect {} 失败！！'.format(cfile))
 
 def cleancustom():
     starttime = time.perf_counter()
 
-    #photo_today = photo_p + r"\原始工卡照\20200706补录"
+    #photo_today = photo_p + r"\原始工卡照\20200831补录"
     today = datetime.now().strftime('%Y%m%d')
     photo_today = "".join([photo_p, "\原始工卡照", '\{}'.format(today), "补录"])
 
