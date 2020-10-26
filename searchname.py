@@ -44,7 +44,9 @@ searchlog.addHandler(searchhandler)
 
 
 # Only English characters and Chinese characters are allowed
-def check_name(name):
+def check_name(name:str)->list:
+    """Check the name is reasonable.
+    return error character list."""
     errornum = []
     for num, char in enumerate(name):
         if num == 0:
@@ -60,6 +62,7 @@ def check_name(name):
         return True
     else:
         # searchlog.error("File <{}> name is illegal".format(file.stem))
+        print(name,':',errornum)
         return errornum
 
     # searchlog.error("File <{}> name is illegal".format(file.stem))
@@ -78,7 +81,7 @@ def del_cust(finally_name, cust_path):
 def cleancustom():
     starttime = time.perf_counter()
 
-    #photo_today = photo_p + r"\原始工卡照\20200831补录"
+    #photo_today = photo_p + r"\原始工卡照\20201023补录"
     today = datetime.now().strftime('%Y%m%d')
     photo_today = "".join([photo_p, "\原始工卡照", '\{}'.format(today), "补录"])
 
@@ -134,14 +137,16 @@ def cleancustom():
         searchlog.debug('Time used : {}'.format(usetime))
 
 
-def find_all_name(finally_name, alljpgfile):
+def find_all_name(finally_name:list, alljpgfile:dict)->None:
+    """Find the correct filename of all JPG tyles and remove invalid characters.
+    """
     for file in alljpgfile:
         if check_name(file.stem) != True:
             # Clear the illegal
-            namel = [n for n in file.stem]
+            named = { key:value for key,value in enumerate(file.stem)}
             for n in check_name(file.stem):
-                namel.pop(n)
-            correctname = "".join(namel)
+                named.pop(n)
+            correctname = "".join(named.values())
             # newPath_object = Path/'string'
             record = {'old':file.stem, 'new':correctname}
             searchlog.warning(" Rename <{old}> to <{new}>".format(**record))
